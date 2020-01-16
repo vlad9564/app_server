@@ -1,6 +1,6 @@
 const graphql = require("graphql");
 const _ = require("lodash");
-const { GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList, GraphQLNonNull } = graphql;
+const { GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLBoolean } = graphql;
 
 const User = require("../../models/user");
 const Product = require("../../models/product");
@@ -19,7 +19,8 @@ const ProductType = new GraphQLObjectType({
     name: "Product",
     fields: () => ({
         id: { type: GraphQLID },
-        name: { type: GraphQLString }
+        name: { type: GraphQLString },
+        done: { type: GraphQLBoolean }
     })
 })
 
@@ -80,11 +81,13 @@ const Mutation = new GraphQLObjectType({
         addProduct: {
             type: ProductType,
             args: {
-                name: { type: new GraphQLNonNull(GraphQLString) }
+                name: { type: new GraphQLNonNull(GraphQLString) },
+                done: { type: GraphQLBoolean }
             },
             resolve(parent, args) {
                 const product = new Product({
-                    name: args.name
+                    name: args.name,
+                    done: args.done
                 });
                 return product.save();
             }
@@ -97,6 +100,34 @@ const Mutation = new GraphQLObjectType({
             resolve(parent, args) {
                 // return Product.findById(args.id);
                 return Product.deleteOne(Product.findById(args.id));
+            }
+        },
+        deleteProducts: {
+            type: GraphQLList(ProductType),
+            args: {
+                ids: { type: GraphQLList(GraphQLID) }
+            },
+            resolve(parent, args) {
+                args.ids.forEach(id => {
+                    Product.remove(({ _id: id }))
+                });
+            }
+        },
+        updateProduct: {
+            type: ProductType,
+            args: {
+                id: { type: GraphQLID },
+                done: { type: GraphQLBoolean }
+            },
+            resolve(parent, args) {
+                // let changedProduct = Product.findById(args.id);
+                // Product.findOneAndUpdate
+                // console.log(changedProduct);
+                // return changedProduct;
+                const filter = { _id: args.id }
+                const update = { done: args.done }
+                return Product.findOneAndUpdate(filter, update);
+
             }
         }
     }
